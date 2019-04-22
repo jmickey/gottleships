@@ -3,8 +3,10 @@ package server
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
 	"regexp"
+	"strings"
 
 	"github.com/google/logger"
 	"github.com/jaymickey/gottleships/pkg/battleship"
@@ -48,8 +50,13 @@ func connHandler(c *client.Client) {
 	go sender(c, logPrfx)
 
 	select {
-	case msg := <-c.Recv:
+	case msg, ok := <-c.Recv:
 		switch msg {
+
+		case "":
+			if !ok {
+				return
+			}
 
 		case "START GAME":
 			gm = battleship.NewGame()
@@ -59,34 +66,58 @@ func connHandler(c *client.Client) {
 		default:
 			valid, err := regexp.MatchString("^[A-I][1-9]$", msg)
 			if err != nil || !valid {
-				logger.Fatalf("%v received invalid msg: %v", logPrfx, msg)
+				close(c.Trans)
+				close(c.Recv)
+				logger.Errorf("%v received invalid msg: '%v', closing connection", logPrfx, msg)
+				return
 			}
 
-			if gm.Fire(msg) {
+			switch gm.Fire(msg) {
 
+			case true:
+				c.Trans <- "HIT"
+				if gm.IsGameOver() {
+					c.Trans <- string(gm.Shots())
+					return
+				}
+
+			default:
+				c.Trans <- "MISS"
 			}
 		}
 	}
-
 }
 
 func receiver(c *client.Client, logPrfx string) {
-	scanner := bufio.NewScanner(c.Conn)
-	for scanner.Scan() {
-		msg := scanner.Text()
+	rd := bufio.NewReader(c.Conn)
+	for {
+		msg, err := rd.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				logger.Errorf("%v connection closed by client", logPrfx)
+				return
+			}
+			logger.Errorf("%v %v", logPrfx, err.Error())
+			return
+		}
+		msg = strings.TrimSuffix(msg, "\n")
 		logger.Infof("%v received message from client: %v", logPrfx, msg)
 		c.Recv <- msg
 	}
 }
 
 func sender(c *client.Client, logPrfx string) {
+	wr := bufio.NewWriter(c.Conn)
 	for {
 		select {
 		case msg, ok := <-c.Trans:
 			if !ok {
-				logger.Fatal("Channel closed")
+				logger.Errorf("%v transmit channel closed", logPrfx)
+				return
 			}
-			fmt.Printf("Received message: %s", msg)
+			logger.Infof("%v sending message: %s", logPrfx, msg)
+			wr.WriteString(fmt.Sprintf("%s\n", msg))
+			wr.Flush()
 		}
 	}
 }
