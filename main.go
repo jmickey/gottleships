@@ -16,6 +16,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -56,15 +57,17 @@ func main() {
 	log := logger.Init("BattleshipLogger", true, false, lf)
 	defer log.Close()
 
+	p := fmt.Sprintf("%v", port)
+
 	switch strings.ToLower(mode) {
 	case "client":
 		log.Info("Starting application in client mode")
-		if err := client.StartClient(hostname, string(port)); err != nil {
+		if err := client.StartClient(hostname, p); err != nil {
 			log.Fatal(err.Error())
 		}
 	case "server":
 		log.Info("Starting application in server mode")
-		server.StartServer(string(port))
+		server.StartServer(p)
 	default:
 		logger.Error("Invalid value for flag 'mode'")
 		flag.Usage()
