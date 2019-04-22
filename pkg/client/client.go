@@ -56,5 +56,4 @@ func (c *Client) Send() {
 			fmt.Printf("Received message: %s", msg)
 		}
 	}
-
 }
