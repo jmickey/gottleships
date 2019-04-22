@@ -2,7 +2,8 @@ package battleship
 
 // Game represents an instance of a game
 type Game struct {
-	sh *ships
+	sh    *ships
+	shots int
 }
 
 // NewGame creates a new instance of a game,
@@ -15,6 +16,7 @@ func NewGame() *Game {
 
 // Fire checks the position povided and returns a bool
 func (g *Game) Fire(cell string) bool {
+	g.shots++
 	if hit, class := g.sh.checkCell(cell); hit {
 		g.sh.registerHit(cell, class)
 		return true
@@ -33,4 +35,9 @@ func (g *Game) IsGameOver() bool {
 		return true
 	}
 	return false
+}
+
+// Shots returns the number of shots taken since the start of the game
+func (g *Game) Shots() int {
+	return g.shots
 }
