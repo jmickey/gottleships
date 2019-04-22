@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"regexp"
 
 	"github.com/google/logger"
 	"github.com/jaymickey/gottleships/pkg/client"
@@ -21,8 +22,8 @@ func StartServer(port string) error {
 		logger.Infof("Client connected, addr: %s", conn.RemoteAddr().String())
 		c := &client.Client{
 			Conn:  conn,
-			Trans: make(chan []byte),
-			Recv:  make(chan []byte),
+			Trans: make(chan string),
+			Recv:  make(chan string),
 		}
 		// Launch goroutine to handle connection. Allowing the server, freeing
 		// the server to accept another connection.
@@ -38,12 +39,31 @@ func StartServer(port string) error {
 // is closed.
 func connHandler(c *client.Client) {
 	defer c.Conn.Close()
-	logPrfx := fmt.Sprintf("client %v:", c.Conn.RemoteAddr().String())
+	logPrfx := fmt.Sprintf("[client %v]", c.Conn.RemoteAddr().String())
 	defer logger.Infof("%v closed the connection", logPrfx)
 
+	go receiver(c, logPrfx)
+	go sender(c, logPrfx)
+
+}
+
+func receiver(c *client.Client, logPrfx string) {
 	scanner := bufio.NewScanner(c.Conn)
 	for scanner.Scan() {
 		msg := scanner.Text()
-		logger.Infof("%v received message '%v'", logPrfx, msg)
+		logger.Infof("%v received message from client: %v", logPrfx, msg)
+		c.Recv <- msg
+	}
+}
+
+func sender(c *client.Client, logPrfx string) {
+	for {
+		select {
+		case msg, ok := <-c.Trans:
+			if !ok {
+				logger.Fatal("Channel closed")
+			}
+			fmt.Printf("Received message: %s", msg)
+		}
 	}
 }

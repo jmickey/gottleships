@@ -2,7 +2,6 @@ package client
 
 import (
 	"fmt"
-	"log"
 	"net"
 
 	"github.com/google/logger"
@@ -11,8 +10,8 @@ import (
 // Client represents a client connection
 type Client struct {
 	Conn  net.Conn
-	Trans chan []byte
-	Recv  chan []byte
+	Trans chan string
+	Recv  chan string
 }
 
 // StartClient starts the application in client mode
@@ -24,17 +23,17 @@ func StartClient(hostname string, port string) error {
 
 	client := &Client{
 		Conn:  conn,
-		Trans: make(chan []byte),
-		Recv:  make(chan []byte),
+		Trans: make(chan string),
+		Recv:  make(chan string),
 	}
 
-	go client.Receive()
-	go client.Send()
+	go client.receive()
+	go client.send()
 
 	return nil
 }
 
-func (c *Client) Receive() {
+func (c *Client) receive() {
 	for {
 		select {
 		case msg, ok := <-c.Recv:
@@ -46,12 +45,12 @@ func (c *Client) Receive() {
 	}
 }
 
-func (c *Client) Send() {
+func (c *Client) send() {
 	for {
 		select {
 		case msg, ok := <-c.Trans:
 			if !ok {
-				log.Fatal("Channel closed")
+				logger.Fatal("Channel closed")
 			}
 			fmt.Printf("Received message: %s", msg)
 		}
