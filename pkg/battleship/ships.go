@@ -3,6 +3,7 @@ package battleship
 import (
 	"fmt"
 	"math/rand"
+	"time"
 )
 
 type ship struct {
@@ -24,6 +25,7 @@ const (
 )
 
 func (ss *ships) setPositions() {
+	rand.Seed(time.Now().UnixNano())
 	ss.remaining = 4
 	ss.ships = map[string]*ship{
 		cClass: &ship{length: 5, health: 5},
@@ -34,12 +36,12 @@ func (ss *ships) setPositions() {
 
 	for _, s := range ss.ships {
 		var orientations []byte
-		startRow := rand.Intn(9)
+		startRow := rand.Intn(9) + 1
 
 		switch {
-		case startRow+s.length > 8:
+		case startRow+s.length > 9:
 			orientations = append(orientations, 'N')
-		case startRow-s.length < 0:
+		case startRow-s.length < 1:
 			orientations = append(orientations, 'S')
 		default:
 			orientations = append(orientations, 'N', 'S')
