@@ -7,6 +7,7 @@ import (
 	"regexp"
 
 	"github.com/google/logger"
+	"github.com/jaymickey/gottleships/pkg/battleship"
 	"github.com/jaymickey/gottleships/pkg/client"
 )
 
@@ -42,8 +43,30 @@ func connHandler(c *client.Client) {
 	logPrfx := fmt.Sprintf("[client %v]", c.Conn.RemoteAddr().String())
 	defer logger.Infof("%v closed the connection", logPrfx)
 
+	var gm *battleship.Game
 	go receiver(c, logPrfx)
 	go sender(c, logPrfx)
+
+	select {
+	case msg := <-c.Recv:
+		switch msg {
+
+		case "START GAME":
+			gm = battleship.NewGame()
+			c.Trans <- "POSITIONING SHIPS"
+			c.Trans <- "SHIPS IN POSITION"
+
+		default:
+			valid, err := regexp.MatchString("^[A-I][1-9]$", msg)
+			if err != nil || !valid {
+				logger.Fatalf("%v received invalid msg: %v", logPrfx, msg)
+			}
+
+			if gm.Fire(msg) {
+
+			}
+		}
+	}
 
 }
 
