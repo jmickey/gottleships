@@ -15,7 +15,10 @@ import (
 
 // StartServer starts the application in server mode
 func StartServer(port string) error {
-	ln, _ := net.Listen("tcp4", fmt.Sprintf("localhost:%v", port))
+	ln, err := net.Listen("tcp4", fmt.Sprintf("localhost:%v", port))
+	if err != nil {
+		logger.Fatalf("%v", err.Error())
+	}
 	logger.Infof("Listening on localhost:%v", port)
 	for {
 		conn, err := ln.Accept()
@@ -55,6 +58,7 @@ func connHandler(c *client.Client) {
 
 		case "":
 			if !ok {
+				close(c.Trans)
 				return
 			}
 
@@ -67,7 +71,6 @@ func connHandler(c *client.Client) {
 			valid, err := regexp.MatchString("^[A-I][1-9]$", msg)
 			if err != nil || !valid {
 				close(c.Trans)
-				close(c.Recv)
 				logger.Errorf("%v received invalid msg: '%v', closing connection", logPrfx, msg)
 				return
 			}
@@ -93,6 +96,7 @@ func receiver(c *client.Client, logPrfx string) {
 	for {
 		msg, err := rd.ReadString('\n')
 		if err != nil {
+			close(c.Recv)
 			if err == io.EOF {
 				logger.Errorf("%v connection closed by client", logPrfx)
 				return
