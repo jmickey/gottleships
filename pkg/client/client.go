@@ -5,6 +5,7 @@ import (
 	"net"
 
 	"github.com/google/logger"
+	"github.com/jaymickey/gottleships/pkg/ui"
 )
 
 // Client represents a client connection
@@ -29,6 +30,9 @@ func StartClient(hostname string, port string) error {
 
 	go client.receive()
 	go client.send()
+	if err = ui.Load(); err != nil {
+		return err
+	}
 
 	return nil
 }
