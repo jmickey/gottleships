@@ -1,6 +1,6 @@
 # Gottleships: Go(Ba)ttleships
 
-Single player implementation of the Battleships game in Go with a client/server architecture that communicates over raw sockets, complete with a terminal based UI (TUI). I originally created Gottleships as part of an assignment for university (UNE COSC340).
+Single player implementation of the Battleships game in Go with a client/server architecture that communicates over raw sockets, complete with a terminal based UI (TUI). I originally created Gottleships as part of an assignment for university.
 
 ## Building & Running
 

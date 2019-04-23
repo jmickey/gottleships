@@ -75,15 +75,20 @@ func connHandler(c *client.Client) {
 				return
 			}
 
-			switch gm.Fire(msg) {
+			hit, err := gm.Fire(msg)
+			if err != nil {
+				close(c.Trans)
+				logger.Errorf("%v received invalid msg: '%v', closing connection", logPrfx, msg)
+				return
+			}
 
+			switch hit {
 			case true:
 				c.Trans <- "HIT"
 				if gm.IsGameOver() {
 					c.Trans <- string(gm.Shots())
 					return
 				}
-
 			default:
 				c.Trans <- "MISS"
 			}

@@ -9,25 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestShipPositionsValid(t *testing.T) {
-	sh := &ships{}
-	sh.setPositions()
-	positions := make(map[string]bool)
-
-	for k, s := range sh.ships {
-		for _, p := range s.position {
-			match, _ := regexp.MatchString("^[A-Z][1-9]$", p)
-			assert.Truef(t, match, "position %s in %s doesn't match regex", p, k)
-			positions[p] = true
-		}
-	}
-	assert.True(t, len(positions) == 14, "there should be exactly 14 positions")
-}
-
 func TestShipPlacement(t *testing.T) {
 	sh := &ships{}
 	sh.setPositions()
-	assert.Equal(t, int16(4), sh.remaining, "should be 4 ships remaining")
 
 	pos1 := sh.ships["Canberra"].position[0]
 	pos2 := sh.ships["Canberra"].position[1]
@@ -58,6 +42,21 @@ func TestShipPlacement(t *testing.T) {
 		}
 		assert.Contains(t, cols, col[bytes.IndexByte(col, pos2[0])], "should be adjacent column")
 	}
+}
+
+func TestShipPositionsValid(t *testing.T) {
+	sh := &ships{}
+	sh.setPositions()
+	positions := make(map[string]bool)
+
+	for k, s := range sh.ships {
+		for _, p := range s.position {
+			match, _ := regexp.MatchString("^[A-Z][1-9]$", p)
+			assert.Truef(t, match, "position %s in %s doesn't match regex", p, k)
+			positions[p] = true
+		}
+	}
+	assert.True(t, len(positions) == 14, "there should be exactly 14 positions")
 }
 
 func TestCheckCell(t *testing.T) {
