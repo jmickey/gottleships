@@ -41,6 +41,7 @@ func (ss *ships) setPositions() {
 
 	for _, s := range ss.ships {
 		var retry bool
+		// Acts as a do...while loop
 		for cont := true; cont; cont = retry {
 			retry = true
 			var orientations []byte
@@ -120,6 +121,8 @@ func (ss *ships) setPositions() {
 					retry = false
 				}
 				if len(orientations) < 1 {
+					// Setting failed = false will allow us to
+					// jump out of current loop and retry
 					failed = false
 				}
 			}
