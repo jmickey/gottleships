@@ -25,9 +25,12 @@ const (
 	aClass = "Armidale"
 )
 
-var taken []string
+func init() {
+	rand.Seed(time.Now().UTC().UnixNano())
+}
 
 func (ss *ships) setPositions() {
+	var taken []string
 	ss.remaining = 4
 	ss.ships = map[string]*ship{
 		cClass: &ship{length: 5, health: 5},
@@ -37,10 +40,9 @@ func (ss *ships) setPositions() {
 	}
 
 	for _, s := range ss.ships {
-		for {
-			retry := false
-
-			rand.Seed(time.Now().UnixNano())
+		var retry bool
+		for cont := true; cont; cont = retry {
+			retry = true
 			var orientations []byte
 			cols := []byte{'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'}
 			startRow := rand.Intn(9) + 1
@@ -59,13 +61,10 @@ func (ss *ships) setPositions() {
 				orientations = append(orientations, 'W')
 			}
 
-			for {
-				if len(orientations) < 1 {
-					retry = true
-					break
-				}
+			var failed bool
+			for _cont := true; _cont; _cont = failed {
 				orientation := orientations[rand.Intn(len(orientations))]
-				failed := false
+				failed = false
 				pos := []string{}
 
 				switch orientation {
@@ -118,12 +117,11 @@ func (ss *ships) setPositions() {
 				if !failed {
 					s.position = append(s.position, pos...)
 					taken = append(taken, s.position...)
-					break
+					retry = false
 				}
-			}
-
-			if !retry {
-				break
+				if len(orientations) < 1 {
+					failed = false
+				}
 			}
 		}
 	}

@@ -12,13 +12,16 @@ import (
 func TestShipPositionsValid(t *testing.T) {
 	sh := &ships{}
 	sh.setPositions()
+	positions := make(map[string]bool)
 
 	for k, s := range sh.ships {
 		for _, p := range s.position {
 			match, _ := regexp.MatchString("^[A-Z][1-9]$", p)
 			assert.Truef(t, match, "position %s in %s doesn't match regex", p, k)
+			positions[p] = true
 		}
 	}
+	assert.True(t, len(positions) == 14, "there should be exactly 14 positions")
 }
 
 func TestShipPlacement(t *testing.T) {
