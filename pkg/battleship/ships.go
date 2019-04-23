@@ -64,19 +64,19 @@ func (ss *ships) setPositions() {
 		switch orientation {
 		case 'N':
 			for i := 0; i < s.length; i++ {
-				s.position = append(s.position, fmt.Sprintf("%v%v", col[startCol], startRow+i))
+				s.position = append(s.position, fmt.Sprintf("%v%v", string(col[startCol]), startRow-i))
 			}
 		case 'S':
 			for i := 0; i < s.length; i++ {
-				s.position = append(s.position, fmt.Sprintf("%v%v", col[startCol], startRow-i))
+				s.position = append(s.position, fmt.Sprintf("%v%v", string(col[startCol]), startRow+i))
 			}
 		case 'E':
 			for i := 0; i < s.length; i++ {
-				s.position = append(s.position, fmt.Sprintf("%v%v", col[startCol-i], startRow))
+				s.position = append(s.position, fmt.Sprintf("%v%v", string(col[startCol-i]), startRow))
 			}
 		case 'W':
 			for i := 0; i < s.length; i++ {
-				s.position = append(s.position, fmt.Sprintf("%v%v", col[startCol+i], startRow+i))
+				s.position = append(s.position, fmt.Sprintf("%v%v", string(col[startCol+i]), startRow+i))
 			}
 		}
 	}
