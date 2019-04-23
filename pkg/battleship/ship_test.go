@@ -2,11 +2,24 @@ package battleship
 
 import (
 	"bytes"
+	"regexp"
 	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestShipPositionsValid(t *testing.T) {
+	sh := &ships{}
+	sh.setPositions()
+
+	for k, s := range sh.ships {
+		for _, p := range s.position {
+			match, _ := regexp.MatchString("^[A-Z][1-9]$", p)
+			assert.Truef(t, match, "position %s in %s doesn't match regex", p, k)
+		}
+	}
+}
 
 func TestShipPlacement(t *testing.T) {
 	sh := &ships{}
@@ -21,13 +34,26 @@ func TestShipPlacement(t *testing.T) {
 	case pos1[0] == pos2[0]:
 		i, _ := strconv.Atoi(string(pos1[1]))
 		j, _ := strconv.Atoi(string(pos2[1]))
-		rows := []int{i - 1, i + 1}
+		rows := []int{}
+		if i > 0 {
+			rows = append(rows, i-1)
+		}
+		if i < 8 {
+			rows = append(rows, i+1)
+		}
 		assert.Contains(t, rows, j, "row should be +- 1")
 
 	case pos1[1] == pos2[1]:
 		col := []byte{'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'}
-		index := bytes.IndexByte(col, pos1[1])
-		assert.Contains(t, []byte{col[index-1], col[index+1]}, col[index], "should be adjacent column")
+		index := bytes.IndexByte(col, pos1[0])
+		cols := []byte{}
+		if index > 0 {
+			cols = append(cols, col[index-1])
+		}
+		if index < 8 {
+			cols = append(cols, col[index+1])
+		}
+		assert.Contains(t, cols, col[bytes.IndexByte(col, pos2[0])], "should be adjacent column")
 	}
 }
 

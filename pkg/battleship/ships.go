@@ -1,6 +1,7 @@
 package battleship
 
 import (
+	"bytes"
 	"fmt"
 	"math/rand"
 	"time"
@@ -24,8 +25,9 @@ const (
 	aClass = "Armidale"
 )
 
+var taken []string
+
 func (ss *ships) setPositions() {
-	rand.Seed(time.Now().UnixNano())
 	ss.remaining = 4
 	ss.ships = map[string]*ship{
 		cClass: &ship{length: 5, health: 5},
@@ -35,48 +37,93 @@ func (ss *ships) setPositions() {
 	}
 
 	for _, s := range ss.ships {
-		var orientations []byte
-		startRow := rand.Intn(9) + 1
+		for {
+			retry := false
 
-		switch {
-		case startRow+s.length > 9:
-			orientations = append(orientations, 'N')
-		case startRow-s.length < 1:
-			orientations = append(orientations, 'S')
-		default:
-			orientations = append(orientations, 'N', 'S')
-		}
+			rand.Seed(time.Now().UnixNano())
+			var orientations []byte
+			cols := []byte{'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'}
+			startRow := rand.Intn(9) + 1
+			startCol := rand.Intn(9)
 
-		startCol := rand.Intn(9)
-
-		switch {
-		case startCol+s.length > 8:
-			orientations = append(orientations, 'W')
-		case startCol-s.length < 0:
-			orientations = append(orientations, 'E')
-		default:
-			orientations = append(orientations, 'E', 'W')
-		}
-
-		orientation := orientations[rand.Intn(len(orientations)-1)]
-		col := []byte{'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'}
-
-		switch orientation {
-		case 'N':
-			for i := 0; i < s.length; i++ {
-				s.position = append(s.position, fmt.Sprintf("%v%v", string(col[startCol]), startRow-i))
+			if startRow-s.length >= 0 {
+				orientations = append(orientations, 'N')
 			}
-		case 'S':
-			for i := 0; i < s.length; i++ {
-				s.position = append(s.position, fmt.Sprintf("%v%v", string(col[startCol]), startRow+i))
+			if startRow+s.length <= 10 {
+				orientations = append(orientations, 'S')
 			}
-		case 'E':
-			for i := 0; i < s.length; i++ {
-				s.position = append(s.position, fmt.Sprintf("%v%v", string(col[startCol-i]), startRow))
+			if (startCol+s.length)+1 <= 10 {
+				orientations = append(orientations, 'E')
 			}
-		case 'W':
-			for i := 0; i < s.length; i++ {
-				s.position = append(s.position, fmt.Sprintf("%v%v", string(col[startCol+i]), startRow+i))
+			if (startCol-s.length)+1 >= 0 {
+				orientations = append(orientations, 'W')
+			}
+
+			for {
+				if len(orientations) < 1 {
+					retry = true
+					break
+				}
+				orientation := orientations[rand.Intn(len(orientations))]
+				failed := false
+				pos := []string{}
+
+				switch orientation {
+				case 'N':
+					for i := 0; i < s.length; i++ {
+						p := fmt.Sprintf("%v%v", string(cols[startCol]), startRow-i)
+						if contains(taken, p) {
+							in := bytes.IndexByte(orientations, orientation)
+							orientations = append(orientations[:in], orientations[in+1:]...)
+							failed = true
+							break
+						}
+						pos = append(pos, p)
+					}
+				case 'S':
+					for i := 0; i < s.length; i++ {
+						p := fmt.Sprintf("%v%v", string(cols[startCol]), startRow+i)
+						if contains(taken, p) {
+							in := bytes.IndexByte(orientations, orientation)
+							orientations = append(orientations[:in], orientations[in+1:]...)
+							failed = true
+							break
+						}
+						pos = append(pos, p)
+					}
+				case 'E':
+					for i := 0; i < s.length; i++ {
+						p := fmt.Sprintf("%v%v", string(cols[startCol+i]), startRow)
+						if contains(taken, p) {
+							in := bytes.IndexByte(orientations, orientation)
+							orientations = append(orientations[:in], orientations[in+1:]...)
+							failed = true
+							break
+						}
+						pos = append(pos, p)
+					}
+				case 'W':
+					for i := 0; i < s.length; i++ {
+						p := fmt.Sprintf("%v%v", string(cols[startCol-i]), startRow)
+						if contains(taken, p) {
+							in := bytes.IndexByte(orientations, orientation)
+							orientations = append(orientations[:in], orientations[in+1:]...)
+							failed = true
+							break
+						}
+						pos = append(pos, p)
+					}
+				}
+
+				if !failed {
+					s.position = append(s.position, pos...)
+					taken = append(taken, s.position...)
+					break
+				}
+			}
+
+			if !retry {
+				break
 			}
 		}
 	}
@@ -98,4 +145,13 @@ func (ss *ships) registerHit(cell string, class string) {
 	if ss.ships[class].health == 0 {
 		ss.remaining--
 	}
+}
+
+func contains(s []string, v string) bool {
+	for _, p := range s {
+		if p == v {
+			return true
+		}
+	}
+	return false
 }
