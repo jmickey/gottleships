@@ -1,75 +1,60 @@
 package battleship
 
 import (
-	"bytes"
 	"regexp"
-	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestShipPlacement(t *testing.T) {
+func TestPositionsAreAdjacent(t *testing.T) {
 	sh := &ships{}
 	sh.setPositions()
 
-	pos1 := sh.ships["Canberra"].position[0]
-	pos2 := sh.ships["Canberra"].position[1]
-	assert.NotEqual(t, pos1, pos2, "cells should not be the same")
-
-	switch {
-	case pos1[0] == pos2[0]:
-		i, _ := strconv.Atoi(string(pos1[1]))
-		j, _ := strconv.Atoi(string(pos2[1]))
-		rows := []int{}
-		if i > 0 {
-			rows = append(rows, i-1)
-		}
-		if i < 8 {
-			rows = append(rows, i+1)
-		}
-		assert.Contains(t, rows, j, "row should be +- 1")
-
-	case pos1[1] == pos2[1]:
-		col := []byte{'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'}
-		index := bytes.IndexByte(col, pos1[0])
-		cols := []byte{}
-		if index > 0 {
-			cols = append(cols, col[index-1])
-		}
-		if index < 8 {
-			cols = append(cols, col[index+1])
-		}
-		assert.Contains(t, cols, col[bytes.IndexByte(col, pos2[0])], "should be adjacent column")
+	pos, err := sh.getPositionByClass("Hobart")
+	if err != nil {
+		t.Fatalf("%s", err.Error())
 	}
+	f, s := pos[0][0], pos[1][0]
+	if f == s {
+		f, s = pos[0][1], pos[1][1]
+	}
+
+	assert.Truef(t,
+		(f-1 == s || f+1 == s),
+		"row/col %s is not adjacent to %s", string(s), string(f))
 }
 
 func TestShipPositionsValid(t *testing.T) {
-	sh := &ships{}
-	sh.setPositions()
-	positions := make(map[string]bool)
-
-	for k, s := range sh.ships {
-		for _, p := range s.position {
-			match, _ := regexp.MatchString("^[A-Z][1-9]$", p)
-			assert.Truef(t, match, "position %s in %s doesn't match regex", p, k)
-			positions[p] = true
-		}
+	s := &ships{}
+	s.setPositions()
+	assert.True(t, len(s.allCells) == 14, "there should be exactly 14 positions")
+	for _, p := range s.allCells {
+		match, _ := regexp.MatchString("^[A-Z][1-9]$", p)
+		assert.Truef(t, match, "position %s doesn't match regex", p)
 	}
-	assert.True(t, len(positions) == 14, "there should be exactly 14 positions")
 }
 
 func TestCheckCell(t *testing.T) {
-	sh := &ships{}
-	sh.setPositions()
-	hit, class := sh.checkCell(sh.ships[hClass].position[1])
+	s := &ships{}
+	s.setPositions()
+	hit, class := s.checkCell(s.ships[hClass].position[1])
 	assert.True(t, hit, "checkCell should return true")
 	assert.Equal(t, hClass, class, "cells should be equal")
 }
 
 func TestRegisterHit(t *testing.T) {
-	sh := &ships{}
-	sh.setPositions()
-	sh.registerHit(sh.ships[lClass].position[2], lClass)
-	assert.Equal(t, 2, sh.ships[lClass].health, "registerHit should return true")
+	s := &ships{}
+	s.setPositions()
+	s.registerHit(s.ships[lClass].position[2], lClass)
+	assert.Equal(t, 2, s.ships[lClass].health, "registerHit should return true")
+}
+
+func TestGetShip(t *testing.T) {
+	s := &ships{}
+	s.setPositions()
+	_, err := s.getShip("Hobart")
+	assert.Nil(t, err, "error was not nil")
+	_, err = s.getShip("NonExistant")
+	assert.Error(t, err, "s.getShip(\"NonExistant\") should return an error")
 }

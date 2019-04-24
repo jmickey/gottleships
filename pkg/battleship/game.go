@@ -7,16 +7,16 @@ import (
 
 // Game represents an instance of a game
 type Game struct {
-	sh        *ships
-	shots     int
-	attempted []string
+	battleships *ships
+	shots       int
+	attempted   []string
 }
 
 // NewGame initiates a new game instance and returns it
 func NewGame() *Game {
 	sh := &ships{}
 	sh.setPositions()
-	return &Game{sh: sh}
+	return &Game{battleships: sh}
 }
 
 // Fire checks the position provided and returns a bool
@@ -27,8 +27,8 @@ func (g *Game) Fire(cell string) (bool, error) {
 	}
 	g.shots++
 	g.attempted = append(g.attempted, cell)
-	if hit, class := g.sh.checkCell(cell); hit {
-		g.sh.registerHit(cell, class)
+	if hit, class := g.battleships.checkCell(cell); hit {
+		g.battleships.registerHit(cell, class)
 		return true, nil
 	}
 	return false, nil
@@ -46,12 +46,12 @@ func (g *Game) isValid(cell string) bool {
 
 // GetRemaining returns the number of remaining ships
 func (g *Game) GetRemaining() int16 {
-	return g.sh.remaining
+	return g.battleships.remaining
 }
 
 // IsGameOver checks if any ships remain and returns a bool
 func (g *Game) IsGameOver() bool {
-	if g.sh.remaining == 0 {
+	if g.battleships.remaining == 0 {
 		return true
 	}
 	return false
