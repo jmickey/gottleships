@@ -37,6 +37,14 @@ Go install will download any dependencies, build the binary, and copy it into `$
 | -log      | -l    | No        | `Stdout`    | Location of file to write log output                          |
 | -verbose  | -v    | No        | `false`     | Generate verbose log output                                   |
 
+### Using startServer.sh & startClient.sh
+
+`startServer.sh` will attempt to run `go get github.com/jaymickey/gottleships` if it does not detect that it has already been retreived. After which it will attempt to run the server. `startServer.sh` requires a single argument `[port]`, which can simply be provided in the form of a number. e.g. `startServer.sh 9000`.
+
+Similarly, `startClient.sh` will also attempt to retreive to Gottleships package if it doesn't detect that it already exists. It requires two arguments - `[hostname]` and `[port]`. e.g. `startClient.sh localhost 9000`.
+
+Both scripts will first attempt to run `gottleships ...`, if the application is not in your `$PATH` this will fail, after which they will attempt to run `$(go env GOPATH)/bin/gottleships ...`. If this also fails then you will need to troubleshoot your go installation.
+
 ## OSS
 
 Gottleships utilises the following open source packages:

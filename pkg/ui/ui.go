@@ -16,9 +16,10 @@ const (
 )
 
 var (
-	hits   int
-	events []string
-	app    *tview.Application
+	events    []string
+	app       *tview.Application
+	attempted map[string]bool
+	hits      int
 )
 
 // Load generates and displays the UI to the user.
@@ -28,8 +29,7 @@ func Load(send, recv chan string, closed chan bool) error {
 		app.Stop()
 		logger.Errorf("The server closed the connection")
 	}()
-
-	hits = 0
+	attempted = make(map[string]bool)
 	app = tview.NewApplication()
 	pages := tview.NewPages()
 
@@ -69,6 +69,16 @@ func Load(send, recv chan string, closed chan bool) error {
 	// displays a game over modal when all ships have been sunk.
 	board.SetSelectedFunc(func(row, col int) {
 		cell := string(cols[col-1]) + string(rows[row-1])
+		// Check if already attempted
+		if _, ok := attempted[cell]; ok {
+			duplicate := tview.NewModal().
+				SetText(fmt.Sprintf("You've already fired on that target!")).
+				AddButtons([]string{"OK"}).SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+				pages.HidePage("duplicate")
+			})
+			pages.AddPage("duplicate", duplicate, false, true)
+			return
+		}
 		send <- cell
 
 		events = append([]string{fmt.Sprintf("[yellow]SENT: [white]%v", cell)}, events...)
@@ -83,15 +93,15 @@ func Load(send, recv chan string, closed chan bool) error {
 			events = append([]string{fmt.Sprintf("[yellow]RECV: [green]%v", resp)}, events...)
 			sbText.SetText(strings.Join(events, "\n"))
 			board.SetCell(row, col, tview.NewTableCell("[red]X").
-				SetSelectable(false).
 				SetAlign(tview.AlignCenter))
 			hits++
+			attempted[cell] = true
 		case "MISS":
 			events = append([]string{fmt.Sprintf("[yellow]RECV: [red]%v", resp)}, events...)
 			sbText.SetText(strings.Join(events, "\n")).ScrollToBeginning()
 			board.SetCell(row, col, tview.NewTableCell("[grey]--").
-				SetSelectable(false).
 				SetAlign(tview.AlignCenter))
+			attempted[cell] = false
 		}
 
 		if hits == 14 {
@@ -164,12 +174,12 @@ func setupBoard() *tview.Table {
 			SetSelectable(false).
 			SetAlign(tview.AlignCenter).
 			SetExpansion(1).
-			SetTextColor(tcell.ColorLightCyan)
+			SetTextColor(tcell.ColorAqua)
 		row := tview.NewTableCell(string(rows[pos])).
 			SetSelectable(false).
 			SetAlign(tview.AlignCenter).
 			SetExpansion(1).
-			SetTextColor(tcell.ColorLightCyan)
+			SetTextColor(tcell.ColorYellow)
 
 		board.SetCell(pos+1, 0, row)
 		board.SetCell(0, pos+1, col)
