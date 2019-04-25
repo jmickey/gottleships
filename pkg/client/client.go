@@ -1,8 +1,11 @@
 package client
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"net"
+	"strings"
 
 	"github.com/google/logger"
 	"github.com/jaymickey/gottleships/pkg/ui"
@@ -10,9 +13,10 @@ import (
 
 // Client represents a client connection
 type Client struct {
-	Conn  net.Conn
-	Trans chan string
-	Recv  chan string
+	Conn   net.Conn
+	Send   chan string
+	Recv   chan string
+	Closed chan bool
 }
 
 // StartClient starts the application in client mode
@@ -23,40 +27,54 @@ func StartClient(hostname string, port string) error {
 	}
 
 	client := &Client{
-		Conn:  conn,
-		Trans: make(chan string),
-		Recv:  make(chan string),
+		Conn:   conn,
+		Send:   make(chan string),
+		Recv:   make(chan string),
+		Closed: make(chan bool),
 	}
 
+	// Launch goroutines to hand sending/receiving over the network
 	go client.receive()
 	go client.send()
-	if err = ui.Load(); err != nil {
+	client.Send <- "START GAME"
+	if err := ui.Load(client.Send, client.Recv, client.Closed); err != nil {
 		return err
 	}
-
 	return nil
 }
 
 func (c *Client) receive() {
+	rd := bufio.NewReader(c.Conn)
 	for {
-		select {
-		case msg, ok := <-c.Recv:
-			if !ok {
-				logger.Fatal("Channel closed")
+		msg, err := rd.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				c.Closed <- true
+				return
 			}
-			fmt.Printf("Received message to send: %s", msg)
+			logger.Errorf("%v", err.Error())
+			return
 		}
+		msg = strings.TrimSuffix(msg, "\n")
+		logger.Infof("received message from server: %v", msg)
+		if msg == "POSITIONING SHIPS" || msg == "SHIPS IN POSITION" {
+			continue
+		}
+		c.Recv <- msg
 	}
 }
 
 func (c *Client) send() {
+	wr := bufio.NewWriter(c.Conn)
 	for {
 		select {
-		case msg, ok := <-c.Trans:
+		case msg, ok := <-c.Send:
 			if !ok {
-				logger.Fatal("Channel closed")
+				return
 			}
-			fmt.Printf("Received message: %s", msg)
+			logger.Infof("sending message: %s", msg)
+			wr.WriteString(fmt.Sprintf("%s\n", msg))
+			wr.Flush()
 		}
 	}
 }

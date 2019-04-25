@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/google/logger"
@@ -20,6 +21,7 @@ func StartServer(port string) error {
 		logger.Fatalf("%v", err.Error())
 	}
 	logger.Infof("Listening on localhost:%v", port)
+
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -27,9 +29,10 @@ func StartServer(port string) error {
 		}
 		logger.Infof("Client connected, addr: %s", conn.RemoteAddr().String())
 		c := &client.Client{
-			Conn:  conn,
-			Trans: make(chan string),
-			Recv:  make(chan string),
+			Conn:   conn,
+			Send:   make(chan string),
+			Recv:   make(chan string),
+			Closed: make(chan bool),
 		}
 		// Launch goroutine to handle connection. Allowing the server, freeing
 		// the server to accept another connection.
@@ -46,51 +49,56 @@ func StartServer(port string) error {
 func connHandler(c *client.Client) {
 	defer c.Conn.Close()
 	logPrfx := fmt.Sprintf("[client %v]", c.Conn.RemoteAddr().String())
-	defer logger.Infof("%v closed the connection", logPrfx)
 
 	var gm *battleship.Game
 	go receiver(c, logPrfx)
 	go sender(c, logPrfx)
 
-	select {
-	case msg, ok := <-c.Recv:
-		switch msg {
+	for {
+		select {
+		case <-c.Closed:
+			close(c.Send)
+			return
 
-		case "":
-			if !ok {
-				close(c.Trans)
-				return
-			}
+		case msg, ok := <-c.Recv:
+			switch msg {
 
-		case "START GAME":
-			gm = battleship.NewGame()
-			c.Trans <- "POSITIONING SHIPS"
-			c.Trans <- "SHIPS IN POSITION"
-
-		default:
-			valid, err := regexp.MatchString("^[A-I][1-9]$", msg)
-			if err != nil || !valid {
-				close(c.Trans)
-				logger.Errorf("%v received invalid msg: '%v', closing connection", logPrfx, msg)
-				return
-			}
-
-			hit, err := gm.Fire(msg)
-			if err != nil {
-				close(c.Trans)
-				logger.Errorf("%v received invalid msg: '%v', closing connection", logPrfx, msg)
-				return
-			}
-
-			switch hit {
-			case true:
-				c.Trans <- "HIT"
-				if gm.IsGameOver() {
-					c.Trans <- string(gm.Shots())
+			case "":
+				if !ok {
+					close(c.Send)
 					return
 				}
+
+			case "START GAME":
+				gm = battleship.NewGame()
+				c.Send <- "POSITIONING SHIPS"
+				c.Send <- "SHIPS IN POSITION"
+
 			default:
-				c.Trans <- "MISS"
+				valid, err := regexp.MatchString("^[A-I][1-9]$", msg)
+				if err != nil || !valid {
+					close(c.Send)
+					logger.Errorf("%v received invalid msg: '%v', closing connection", logPrfx, msg)
+					return
+				}
+
+				hit, err := gm.Fire(msg)
+				if err != nil {
+					close(c.Send)
+					logger.Errorf("%v received invalid msg: '%v', closing connection", logPrfx, msg)
+					return
+				}
+
+				switch hit {
+				case true:
+					c.Send <- "HIT"
+					if gm.IsGameOver() {
+						c.Send <- strconv.Itoa(gm.Shots())
+						return
+					}
+				default:
+					c.Send <- "MISS"
+				}
 			}
 		}
 	}
@@ -101,12 +109,11 @@ func receiver(c *client.Client, logPrfx string) {
 	for {
 		msg, err := rd.ReadString('\n')
 		if err != nil {
-			close(c.Recv)
 			if err == io.EOF {
-				logger.Errorf("%v connection closed by client", logPrfx)
+				logger.Infof("%v connection closed by client", logPrfx)
+				close(c.Recv)
 				return
 			}
-			logger.Errorf("%v %v", logPrfx, err.Error())
 			return
 		}
 		msg = strings.TrimSuffix(msg, "\n")
@@ -119,9 +126,8 @@ func sender(c *client.Client, logPrfx string) {
 	wr := bufio.NewWriter(c.Conn)
 	for {
 		select {
-		case msg, ok := <-c.Trans:
+		case msg, ok := <-c.Send:
 			if !ok {
-				logger.Errorf("%v transmit channel closed", logPrfx)
 				return
 			}
 			logger.Infof("%v sending message: %s", logPrfx, msg)
