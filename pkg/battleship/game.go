@@ -16,7 +16,11 @@ type Game struct {
 func NewGame() *Game {
 	sh := &ships{}
 	sh.setPositions()
-	return &Game{battleships: sh}
+	return &Game{
+		battleships: sh,
+		shots:       0,
+		attempted:   make([]string, 0),
+	}
 }
 
 // Fire checks the position provided and returns a bool

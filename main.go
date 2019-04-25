@@ -32,6 +32,7 @@ var (
 	hostname string
 	port     int
 	logFile  string
+	verbose  bool
 )
 
 func init() {
@@ -39,6 +40,7 @@ func init() {
 	flag.StringVarP(&hostname, "hostname", "h", "localhost", "(Optional) The hostname to listen via or connect")
 	flag.IntVarP(&port, "port", "p", 8080, "(Optional) The port number to listen via or connect")
 	flag.StringVarP(&logFile, "log", "l", "", "(Optional) File to direct log output (default \"stdout\")")
+	flag.BoolVarP(&verbose, "verbose", "v", false, "(Optional) Enablee verbose logging")
 	flag.CommandLine.SortFlags = false
 }
 
@@ -54,7 +56,7 @@ func main() {
 			logger.Fatalf("Failed to open log file: %v", err)
 		}
 	}
-	log := logger.Init("BattleshipLogger", true, false, lf)
+	log := logger.Init("BattleshipLogger", verbose, false, lf)
 	defer log.Close()
 
 	p := fmt.Sprintf("%v", port)
